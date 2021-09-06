@@ -1,29 +1,24 @@
-# EditorConfig: http://EditorConfig.org
-# EditorConfig Properties: https://github.com/editorconfig/editorconfig/wiki/EditorConfig-Properties
-
-# top-most EditorConfig file
 root = true
 
-### defaults
 [*]
-charset = utf-8
-
-# Unix-style newlines with
-end_of_line = lf
-
-# Max line length
-max_line_length=80
-
-# 2 space indentation
+# charset = utf-8
+# end_of_line = lf
 indent_size = 2
-indent_style = space
+# indent_style = space
+# insert_final_newline = true
+# max_line_length = 100
+# tab_width = 4
 
-# remove any whitespace characters preceding newline characters
-trim_trailing_whitespace = true
+[{*.ts,*.ats,*.tsx}]
+# indent_size = 2
+# tab_width = 2
+ij_typescript_use_double_quotes = true
+ij_typescript_force_semicolon_style = false
 
-# newline ending every file
-insert_final_newline = true
+[{.eslintrc,.prettierrc,.babelrc,jest.config,.stylelintrc,*.bowerrc,*.jsb3,*.jsb2,*.json}]
+# indent_size = 2
 
-
-# Denotes preferred quoting style for string literals
-quote_type = single
+[{GalleryImage,*.cjs,*.js}]
+ij_javascript_force_semicolon_style = false
+# indent_size = 2
+# tab_width = 2

@@ -1,18 +1,27 @@
 {
   "compilerOptions": {
-    "outDir": "lib/",
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "importHelpers": true,
+    "isolatedModules": true,
     "jsx": "react-native",
-    "lib": ["esnext"],
-    "target": "es5",
-    "module": "commonjs",
+    "lib": ["es6"],
+    "module": "esnext",
     "moduleResolution": "node",
-    "noEmitOnError": true,
+    "noEmitHelpers": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": false, // Something else (Babel?) is creating the necessary source maps.
     "strict": true,
-    "pretty": true,
-    "removeComments": false,
-    "sourceMap": true,
+    "target": "ESNext"
   },
-  "include": ["src"]
+  "include": [
+    "./src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

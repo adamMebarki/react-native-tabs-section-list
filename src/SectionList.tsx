@@ -25,7 +25,7 @@ const SectionList: FC<IProps> = ({
   sections,
   ...props
 }) => {
-  const sectionListRef = useRef<NativeSectionList>()
+  const sectionListRef = useRef<NativeSectionList>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [blockUpdateIndex, setBlockUpdateIndex] = useState(false)
   const prepareSections = _.map(sections, (item, index) => ({ ...item, index }))
@@ -34,15 +34,12 @@ const SectionList: FC<IProps> = ({
     (index: number) => {
       setCurrentIndex(index)
       setBlockUpdateIndex(true)
-      const sectionList = sectionListRef.current
-      if (sectionList && sectionList.scrollToLocation) {
-        sectionList.scrollToLocation({
-          animated: true,
-          itemIndex: 0,
-          viewOffset: scrollToLocationOffset || 0,
-          sectionIndex: index,
-        })
-      }
+      sectionListRef.current?.scrollToLocation?.({
+        animated: true,
+        itemIndex: 0,
+        viewOffset: scrollToLocationOffset || 0,
+        sectionIndex: index,
+      })
     },
     [scrollToLocationOffset],
   )
@@ -63,10 +60,9 @@ const SectionList: FC<IProps> = ({
     <View style={styles.view}>
       <TabBar {...{ renderTab, onPress, currentIndex, tabBarStyle }} sections={prepareSections} />
       <NativeSectionList
-        {...props}
-        {...{ onViewableItemsChanged }}
+        ref={sectionListRef}
         sections={prepareSections}
-        ref={sectionListRef as React.RefObject<NativeSectionList>}
+        {...{ ...props, onViewableItemsChanged }}
         onMomentumScrollEnd={() => setBlockUpdateIndex(false)}
       />
     </View>

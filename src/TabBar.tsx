@@ -1,18 +1,15 @@
 import React, { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-  Dimensions,
   LayoutChangeEvent,
   LayoutRectangle,
   RegisteredStyle,
   ScrollView,
   SectionListData,
-  StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   ViewStyle,
 } from "react-native"
-
-const windowWidth = Dimensions.get("window").width
 
 interface IProps {
   currentIndex: number
@@ -34,21 +31,25 @@ interface ITabsLayoutRectangle {
 }
 
 const TabBar: FC<IProps> = ({ sections, tabBarStyle, currentIndex, renderTab, onPress }) => {
-  const scrollViewRef = useRef<ScrollView>()
+  const scrollViewRef = useRef<ScrollView>(null)
   const localIndex = useRef(0)
   const [tabContainerMeasurements, setTabContainerMeasurements] = useState<LayoutRectangle>()
   const [tabsMeasurements, setTabsMeasurements] = useState<ITabsLayoutRectangle>({})
+  const windowDimensions = useWindowDimensions()
+  const row: ViewStyle = {
+    flexDirection: "row",
+  }
 
   const s = useMemo(
     () => ({
       view: [
         {
-          width: windowWidth,
+          width: windowDimensions.width,
         },
         tabBarStyle,
       ],
     }),
-    [tabBarStyle],
+    [tabBarStyle, windowDimensions.width],
   )
 
   // default method
@@ -58,7 +59,7 @@ const TabBar: FC<IProps> = ({ sections, tabBarStyle, currentIndex, renderTab, on
     }
     const pageOffset = 0
     const position = currentIndex
-    const containerWidth = windowWidth
+    const containerWidth = windowDimensions.width
     const tabWidth = tabsMeasurements[position].width
     const nextTabMeasurements = tabsMeasurements[position + 1]
     const nextTabWidth = (nextTabMeasurements && nextTabMeasurements.width) || 0
@@ -72,25 +73,26 @@ const TabBar: FC<IProps> = ({ sections, tabBarStyle, currentIndex, renderTab, on
 
     newScrollX = newScrollX > rightBoundScroll ? rightBoundScroll : newScrollX
     return newScrollX
-  }, [currentIndex, tabContainerMeasurements, tabsMeasurements])
+  }, [currentIndex, tabContainerMeasurements, tabsMeasurements, windowDimensions.width])
 
   useEffect(() => {
     if (currentIndex !== localIndex.current) {
       localIndex.current = currentIndex
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({
-          x: getScrollAmount(),
-          animated: true,
-        })
-      }
+      scrollViewRef.current?.scrollTo?.({
+        x: getScrollAmount(),
+        animated: true,
+      })
     }
   }, [currentIndex, getScrollAmount])
 
   const onLayout = (e: LayoutChangeEvent) => setTabContainerMeasurements(e.nativeEvent.layout)
 
   const onTabLayout = useCallback(
-    (key: number) => (ev: LayoutChangeEvent) => {
-      const { x, width, height } = ev.nativeEvent.layout
+    (key: number) => ({
+      nativeEvent: {
+        layout: { width, x, height },
+      },
+    }: LayoutChangeEvent) => {
       setTabsMeasurements((oldTabsMeasurements) => ({
         ...oldTabsMeasurements,
         [key]: {
@@ -121,22 +123,16 @@ const TabBar: FC<IProps> = ({ sections, tabBarStyle, currentIndex, renderTab, on
     <View style={s.view}>
       <ScrollView
         horizontal
-        contentContainerStyle={styles.row}
+        ref={scrollViewRef}
+        contentContainerStyle={row}
         showsHorizontalScrollIndicator={false}
-        ref={scrollViewRef as React.RefObject<ScrollView>}
       >
-        <View {...{ onLayout }} style={styles.row}>
+        <View {...{ onLayout }} style={row}>
           {sections.map(renderLocalTab)}
         </View>
       </ScrollView>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-  },
-})
 
 export default TabBar

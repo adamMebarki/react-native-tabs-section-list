@@ -1,130 +1,138 @@
-import * as React from 'react';
+import React, { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-  View,
-  TouchableOpacity,
-  Dimensions,
-  ScrollView,
   LayoutChangeEvent,
   LayoutRectangle,
-  SectionListData,
   RegisteredStyle,
-  ViewStyle
-} from 'react-native';
-const WindowWidth = Dimensions.get('window').width;
+  ScrollView,
+  SectionListData,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+  ViewStyle,
+} from "react-native"
 
 interface IProps {
-  sections: SectionListData<any>[];
-  renderTab: (section: SectionListData<any>) => React.ReactNode;
-  tabBarStyle?: ViewStyle | RegisteredStyle<ViewStyle>;
-  currentIndex: number;
-  onPress: (index: number) => void;
+  currentIndex: number
+  onPress: (index: number) => void
+  sections: Array<SectionListData<any>>
+  tabBarStyle?: ViewStyle | RegisteredStyle<ViewStyle>
+  renderTab: (section: SectionListData<any>) => ReactNode
 }
 
 interface ITabMeasurements {
-  left: number;
-  right: number;
-  width: number;
-  height: number;
+  left: number
+  right: number
+  width: number
+  height: number
 }
 
 interface ITabsLayoutRectangle {
-  [index: number]: ITabMeasurements;
+  [index: number]: ITabMeasurements
 }
 
-export default class TabBar extends React.PureComponent<IProps, any> {
-  private scrollView: React.RefObject<ScrollView> = React.createRef();
-  private _tabContainerMeasurements!: LayoutRectangle;
-  private _tabsMeasurements: ITabsLayoutRectangle = {};
+const TabBar: FC<IProps> = ({ sections, tabBarStyle, currentIndex, renderTab, onPress }) => {
+  const scrollViewRef = useRef<ScrollView>(null)
+  const localIndex = useRef(0)
+  const [tabContainerMeasurements, setTabContainerMeasurements] = useState<LayoutRectangle>()
+  const [tabsMeasurements, setTabsMeasurements] = useState<ITabsLayoutRectangle>({})
+  const windowDimensions = useWindowDimensions()
+  const row: ViewStyle = {
+    flexDirection: "row",
+  }
 
-  componentDidUpdate(prevProps: IProps) {
-    if (this.props.currentIndex !== prevProps.currentIndex) {
-      if (this.scrollView.current) {
-        this.scrollView.current.scrollTo({
-          x: this.getScrollAmount(),
-          animated: true
-        });
-      }
+  const s = useMemo(
+    () => ({
+      view: [
+        {
+          width: windowDimensions.width,
+        },
+        tabBarStyle,
+      ],
+    }),
+    [tabBarStyle, windowDimensions.width],
+  )
+
+  // default method
+  const getScrollAmount = useCallback(() => {
+    if (!tabContainerMeasurements) {
+      return
     }
-  }
+    const pageOffset = 0
+    const position = currentIndex
+    const containerWidth = windowDimensions.width
+    const tabWidth = tabsMeasurements[position].width
+    const nextTabMeasurements = tabsMeasurements[position + 1]
+    const nextTabWidth = (nextTabMeasurements && nextTabMeasurements.width) || 0
+    const tabOffset = tabsMeasurements[position].left
+    const absolutePageOffset = pageOffset * tabWidth
+    let newScrollX = tabOffset + absolutePageOffset
+    newScrollX -= (containerWidth - (1 - pageOffset) * tabWidth - pageOffset * nextTabWidth) / 2
+    newScrollX = newScrollX >= 0 ? newScrollX : 0
 
-  getScrollAmount = () => {
-    const { currentIndex } = this.props;
-    const position = currentIndex;
-    const pageOffset = 0;
+    const rightBoundScroll = Math.max(tabContainerMeasurements.width - containerWidth, 0)
 
-    const containerWidth = WindowWidth;
-    const tabWidth = this._tabsMeasurements[position].width;
-    const nextTabMeasurements = this._tabsMeasurements[position + 1];
-    const nextTabWidth =
-      (nextTabMeasurements && nextTabMeasurements.width) || 0;
-    const tabOffset = this._tabsMeasurements[position].left;
-    const absolutePageOffset = pageOffset * tabWidth;
-    let newScrollX = tabOffset + absolutePageOffset;
+    newScrollX = newScrollX > rightBoundScroll ? rightBoundScroll : newScrollX
+    return newScrollX
+  }, [currentIndex, tabContainerMeasurements, tabsMeasurements, windowDimensions.width])
 
-    newScrollX -=
-      (containerWidth -
-        (1 - pageOffset) * tabWidth -
-        pageOffset * nextTabWidth) /
-      2;
-    newScrollX = newScrollX >= 0 ? newScrollX : 0;
+  useEffect(() => {
+    if (currentIndex !== localIndex.current) {
+      localIndex.current = currentIndex
+      scrollViewRef.current?.scrollTo?.({
+        x: getScrollAmount(),
+        animated: true,
+      })
+    }
+  }, [currentIndex, getScrollAmount])
 
-    const rightBoundScroll = Math.max(
-      this._tabContainerMeasurements.width - containerWidth,
-      0
-    );
+  const onLayout = (e: LayoutChangeEvent) => setTabContainerMeasurements(e.nativeEvent.layout)
 
-    newScrollX = newScrollX > rightBoundScroll ? rightBoundScroll : newScrollX;
-    return newScrollX;
-  }
+  const onTabLayout = useCallback(
+    (key: number) => ({
+      nativeEvent: {
+        layout: { width, x, height },
+      },
+    }: LayoutChangeEvent) => {
+      setTabsMeasurements((oldTabsMeasurements) => ({
+        ...oldTabsMeasurements,
+        [key]: {
+          left: x,
+          right: x + width,
+          width,
+          height,
+        },
+      }))
+    },
+    [],
+  )
 
-  onTabContainerLayout = (e: LayoutChangeEvent) => {
-    this._tabContainerMeasurements = e.nativeEvent.layout;
-  }
+  const renderLocalTab = useCallback(
+    (section: SectionListData<any>, key: number) => {
+      const isActive = currentIndex === key
 
-  onTabLayout = (key: number) => (ev: LayoutChangeEvent) => {
-    const { x, width, height } = ev.nativeEvent.layout;
-    this._tabsMeasurements[key] = {
-      left: x,
-      right: x + width,
-      width,
-      height
-    };
-  }
+      return (
+        <TouchableOpacity {...{ key }} onPress={() => onPress(key)} onLayout={onTabLayout(key)}>
+          {renderTab({ isActive, ...section })}
+        </TouchableOpacity>
+      )
+    },
+    [currentIndex, onPress, onTabLayout, renderTab],
+  )
 
-  renderTab = (section: SectionListData<any>, key: number) => {
-    const { renderTab, onPress, currentIndex } = this.props;
-    const isActive: boolean = currentIndex === key;
-
-    return (
-      <TouchableOpacity
-        onPress={() => onPress(key)}
-        key={key}
-        onLayout={this.onTabLayout(key)}
+  return (
+    <View style={s.view}>
+      <ScrollView
+        horizontal
+        ref={scrollViewRef}
+        contentContainerStyle={row}
+        showsHorizontalScrollIndicator={false}
       >
-        {renderTab({ isActive, ...section })}
-      </TouchableOpacity>
-    );
-  }
-
-  render() {
-    const { sections, tabBarStyle } = this.props;
-
-    return (
-      <View style={[{ width: WindowWidth }, tabBarStyle]}>
-        <ScrollView
-          ref={this.scrollView}
-          showsHorizontalScrollIndicator={false}
-          horizontal
-          contentContainerStyle={{ flexDirection: 'row' }}
-        >
-          <View
-            onLayout={this.onTabContainerLayout}
-            style={[{ flexDirection: 'row' }]}
-          >
-            {sections.map(this.renderTab)}
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
+        <View {...{ onLayout }} style={row}>
+          {sections.map(renderLocalTab)}
+        </View>
+      </ScrollView>
+    </View>
+  )
 }
+
+export default TabBar
